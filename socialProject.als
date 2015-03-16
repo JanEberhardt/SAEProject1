@@ -9,27 +9,33 @@ sig Group extends Profile {
 }
 
 sig User extends Profile {
+	--email: String,
+	--name: String,
 	follows: set Profile,
 	friend: set User,
 	blocks: set User,
-	pDetails: set PersonalDetail
+	pDetails: set PersonalDetail,
+	privateCircle: one privateCircle,
+	friendsCircle: one friendsCircle,
+	friendsOfFriendsCircle: one friendsOfFriendsCircle,
+	transitiveFriendsCircle: one transitiveFriendsCircle,
+	publicCircle: one publicCircle
 	}
 
-sig PersonalDetail {
-	attribute: one PDAttribute
-}
-
-sig PDAttribute{}
+sig PersonalDetail {}
 
 --facts
 fact friendship {all disj u1,u2:User | u2 in u1.friend <=> u1 in u2.friend}
 fact friendshipNonReflexiv {no u: User | u in u.friend}
+--User cannot block himself
 fact blocks{no u:User | u in u.blocks}
 --Each personalDetail must be connected from exactly one user
 fact personalDetail {all pd: PersonalDetail | one u: User | pd in u.pDetails}
---Each personalDetail attribute belongs to exactly one personalDetail
-fact PDAttribute {all pda: PDAttribute | one pd: PersonalDetail | pda in pd.attribute}
-fact administratorIsMember {all g:Group | g.administrator in g.member} 
+--Each administrator has to be a member
+fact administratorIsMember {all g:Group | g.administrator in g.member}
+--There must be at least one administrator
+fact oneAdmin {all admin:Group.administrator | #{admin} > 0}
+ 
 
 -----------------------------
 --all the Content stuff
@@ -37,13 +43,11 @@ fact administratorIsMember {all g:Group | g.administrator in g.member}
 abstract sig Content{
 	comments: set Comment,
 	isVisibleTo: one Circle,
-	owner: one Profile--is basically equal to posted to, right?
+	owner: one Profile --is basically equal to posted to, right?
 }
 
-sig Text{}
-
 sig Post extends Content{
-	--text: one Text, --can be empty!
+	--text: String, --can be empty
 	contains: set Photo
 }
 
@@ -59,7 +63,7 @@ sig Comment extends Content{}
 sig Message{
 	sender: one User,
 	recipient: one User,
-	--text: one Text, --can be empty!
+	text: String, --can be empty
 	contains: set Photo
 }
 
@@ -68,7 +72,20 @@ fact message {all m:Message | m.recipient != m.sender}
 ----------------
 --Circle stuff
 ----------------
-sig Circle{}--Contains other users with respect to one user?
+abstract sig Circle{
+	--users: set User
+}--Contains other users with respect to one user?
+
+sig privateCircle extends Circle{
+}
+
+sig friendsCircle extends Circle{}
+
+sig friendsOfFriendsCircle extends Circle{}
+
+sig transitiveFriendsCircle extends Circle{}
+
+sig publicCircle extends Circle{}
 
 
 -----------------
@@ -76,7 +93,8 @@ sig Circle{}--Contains other users with respect to one user?
 -----------------
 pred show {
 	--all u:User | #{u.friend} >1
-	#{PersonalDetail} > 1 and #{Post}>3 and #{Photo} > 10 and {all u:User | #{u.friend}>2}
+--	#{Post}>3
+	--#{PersonalDetail} > 1 and #{Post}>3 and #{Photo} > 10 and {all u:User | #{u.friend}>2}
 	}
 
 run show for 15
