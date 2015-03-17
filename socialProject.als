@@ -1,3 +1,5 @@
+open util/integer
+
 --------------------------
 --all the profile stuff
 --------------------------
@@ -9,45 +11,42 @@ sig Group extends Profile {
 }
 
 sig User extends Profile {
-	--email: String,
-	--name: String,
 	follows: set Profile,
 	friend: set User,
 	blocks: set User,
 	pDetails: set PersonalDetail,
-	privateCircle: one privateCircle,
-	friendsCircle: one friendsCircle,
-	friendsOfFriendsCircle: one friendsOfFriendsCircle,
-	transitiveFriendsCircle: one transitiveFriendsCircle,
-	publicCircle: one publicCircle
-	}
+	canSee: set Content
+}
 
-sig PersonalDetail {}
+sig PersonalDetail {
+	attribute: one PDAttribute
+}
+
+sig PDAttribute{}
 
 --facts
 fact friendship {all disj u1,u2:User | u2 in u1.friend <=> u1 in u2.friend}
 fact friendshipNonReflexiv {no u: User | u in u.friend}
---User cannot block himself
 fact blocks{no u:User | u in u.blocks}
 --Each personalDetail must be connected from exactly one user
 fact personalDetail {all pd: PersonalDetail | one u: User | pd in u.pDetails}
---Each administrator has to be a member
-fact administratorIsMember {all g:Group | g.administrator in g.member}
---There must be at least one administrator
-fact oneAdmin {all admin:Group.administrator | #{admin} > 0}
- 
+--Each personalDetail attribute belongs to exactly one personalDetail
+fact PDAttribute {all pda: PDAttribute | one pd: PersonalDetail | pda in pd.attribute}
+fact administratorIsMember {all g:Group | g.administrator in g.member} 
 
 -----------------------------
 --all the Content stuff
 -----------------------------
 abstract sig Content{
 	comments: set Comment,
-	isVisibleTo: one Circle,
-	owner: one Profile --is basically equal to posted to, right?
+	circle: one Int,
+	owner: one Profile--is basically equal to posted to, right?
 }
 
+sig Text{}
+
 sig Post extends Content{
-	--text: String, --can be empty
+	--text: one Text, --can be empty!
 	contains: set Photo
 }
 
@@ -57,13 +56,18 @@ sig Comment extends Content{}
 
 --facts
 
+--preds
+pred canSee[u: User, c: Content] {
+	--u in c.isVisibleTo.users
+}
+
 ----------------
 --Messages
 ----------------
 sig Message{
 	sender: one User,
 	recipient: one User,
-	text: String, --can be empty
+	--text: one Text, --can be empty!
 	contains: set Photo
 }
 
@@ -72,33 +76,30 @@ fact message {all m:Message | m.recipient != m.sender}
 ----------------
 --Circle stuff
 ----------------
-abstract sig Circle{
-	--users: set User
-}--Contains other users with respect to one user?
-
-sig privateCircle extends Circle{
-}
-
-sig friendsCircle extends Circle{}
-
-sig friendsOfFriendsCircle extends Circle{}
-
-sig transitiveFriendsCircle extends Circle{}
-
-sig publicCircle extends Circle{}
-
+fact validCircle {all c: Content | c.circle >= 1 and c.circle <= 5}
+-- privacy settings here
+fact privateCircles {all c: Content | c.circle = 1 => (all u: User | c in u.canSee <=> u = c.owner)}
+fact friendsCircles {all c: Content | c.circle = 2 => (all u: User | c in u.canSee <=> (u in c.owner.friend or u = c.owner))}
+fact fofCircles {all c: Content | c.circle = 3 => (all u: User | c in u.canSee <=> (u in c.owner.friend.friend or u in c.owner.friend or u = c.owner))}
+fact chainCircles {all c: Content | c.circle = 4 => (all u: User | c in u.canSee <=> (u in c.owner.*friend or u = c.owner))}
+fact publicCircles {all c: Content | c.circle = 5 => (all u: User | c in u.canSee)}
 
 -----------------
 --commands
 -----------------
-pred show {
+pred checkCirc3 {
 	--all u:User | #{u.friend} >1
---	#{Post}>3
-	--#{PersonalDetail} > 1 and #{Post}>3 and #{Photo} > 10 and {all u:User | #{u.friend}>2}
-	}
+	#{c: Content | c.circle != 3} = 0 and #{c: Content | c.circle = 3} >= 2 and
+	#{User} = 7  and #{PersonalDetail} = 3 and #{Post} = 5 and #{Photo} = 2 and {all u:User | #{u.friend}=2} and {all u:User | #{u.canSee} >= 1}
+}
 
-run show for 15
+pred checkCirc5 {
+	--all u:User | #{u.friend} >1
+	#{c: Content | c.circle != 5} = 0 and #{c: Content | c.circle = 5} >= 2 and
+	#{User} = 7  and #{PersonalDetail} = 3 and #{Post} = 5 and #{Photo} = 2 and {all u:User | #{u.friend}=2} and {all u:User | #{u.canSee} >= 1}
+}
 
+run checkCirc5 for 15
 
 ------------
 --checks
