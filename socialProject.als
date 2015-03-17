@@ -33,6 +33,8 @@ fact personalDetail {all pd: PersonalDetail | one u: User | pd in u.pDetails}
 --Each personalDetail attribute belongs to exactly one personalDetail
 fact PDAttribute {all pda: PDAttribute | one pd: PersonalDetail | pda in pd.attribute}
 fact administratorIsMember {all g:Group | g.administrator in g.member} 
+--There must be at least one administrator
+fact oneAdmin {all admin:Group.administrator | #{admin} > 0}
 
 -----------------------------
 --all the Content stuff
@@ -99,7 +101,7 @@ pred checkCirc5 {
 	#{User} = 7  and #{PersonalDetail} = 3 and #{Post} = 5 and #{Photo} = 2 and {all u:User | #{u.friend}=2} and {all u:User | #{u.canSee} >= 1}
 }
 
-run checkCirc5 for 15
+run checkCirc3 for 15
 
 ------------
 --checks
