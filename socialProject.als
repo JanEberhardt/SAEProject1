@@ -19,10 +19,9 @@ sig User extends Profile {
 }
 
 sig PersonalDetail {
-	attribute: one PDAttribute
+	--attribute: String
 }
 
-sig PDAttribute{}
 
 --facts
 fact friendship {all disj u1,u2:User | u2 in u1.friend <=> u1 in u2.friend}
@@ -30,8 +29,6 @@ fact friendshipNonReflexiv {no u: User | u in u.friend}
 fact blocks{no u:User | u in u.blocks}
 --Each personalDetail must be connected from exactly one user
 fact personalDetail {all pd: PersonalDetail | one u: User | pd in u.pDetails}
---Each personalDetail attribute belongs to exactly one personalDetail
-fact PDAttribute {all pda: PDAttribute | one pd: PersonalDetail | pda in pd.attribute}
 fact administratorIsMember {all g:Group | g.administrator in g.member} 
 --There must be at least one administrator
 fact oneAdmin {all admin:Group.administrator | #{admin} > 0}
@@ -48,7 +45,7 @@ abstract sig Content{
 sig Text{}
 
 sig Post extends Content{
-	--text: one Text, --can be empty!
+	--text: String, --can be empty!
 	contains: set Photo
 }
 
@@ -57,11 +54,15 @@ sig Photo extends Content{}
 sig Comment extends Content{}
 
 --facts
+--fact commentChainsAcyclic {all c:Comment | c not in c.*comments}
+fact commentCommentsOnOneThing{all com:Comment |  one con:Content| com in con.comments}
+fact commentChainCannotStartWithComment{all com:Comment | some con:Content-Comment | com in con.^comments}
 
 --preds
 pred canSee[u: User, c: Content] {
-	--u in c.isVisibleTo.users
+	c in u.canSee
 }
+
 
 ----------------
 --Messages
@@ -80,6 +81,8 @@ fact message {all m:Message | m.recipient != m.sender}
 ----------------
 fact validCircle {all c: Content | c.circle >= 1 and c.circle <= 5}
 -- privacy settings here
+--TODO: Where do we check for blocking? Do it here on in canSee Predicate... btw. maybe renaming canSee attribute of User
+--since there could be missunderstandings
 fact privateCircles {all c: Content | c.circle = 1 => (all u: User | c in u.canSee <=> u = c.owner)}
 fact friendsCircles {all c: Content | c.circle = 2 => (all u: User | c in u.canSee <=> (u in c.owner.friend or u = c.owner))}
 fact fofCircles {all c: Content | c.circle = 3 => (all u: User | c in u.canSee <=> (u in c.owner.friend.friend or u in c.owner.friend or u = c.owner))}
@@ -90,9 +93,8 @@ fact publicCircles {all c: Content | c.circle = 5 => (all u: User | c in u.canSe
 --commands
 -----------------
 pred checkCirc3 {
-	--all u:User | #{u.friend} >1
 	#{c: Content | c.circle != 3} = 0 and #{c: Content | c.circle = 3} >= 2 and
-	#{User} = 7  and #{PersonalDetail} = 3 and #{Post} = 5 and #{Photo} = 2 and {all u:User | #{u.friend}=2} and {all u:User | #{u.canSee} >= 1}
+	#{User} = 7  and #{PersonalDetail} = 1 and #{Post} = 5 and #{Photo} = 2 and {all u:User | #{u.friend}=2} and {all u:User | #{u.canSee} >= 1}
 }
 
 pred checkCirc5 {
@@ -103,10 +105,35 @@ pred checkCirc5 {
 
 run checkCirc3 for 15
 
+pred showSomeComments {
+	#{Comment}>3  and #{Comment.comments}>0
+}
+run showSomeComments for 10
+
+
 ------------
 --checks
 ------------
 check personalDetail {all disj u1,u2: User | no upd:u1.pDetails | upd in u2.pDetails}--Two user cannot have the same personal detail
+check comments {all disj c1,c2: Content | no com:c1.comments | com in c2.comments}--Two Contents cannot have the same comment
+------------------
+--Exercises...
+------------------
 
+--Task 3c
+pred isOnNewsFeed[u: User, c: Content] {
+	{canSee[u,c]} and {c.owner in u.follows}
+}
+run isOnNewsFeed for 3
 
+-------------
+--Task 3d
+-------------
+--1
+check commentChainsAcyclic{all c:Comment | c not in c.^comments}--TODO: I don't need to take reflexif hull here right?
+
+--5
+check groupHasMembers{no g:Group | #{g.member}=0}
+--6
+check allNewsFeedContentIsVisible{all u:User | all c:Content | isOnNewsFeed[u,c] implies canSee[u,c]}
 
