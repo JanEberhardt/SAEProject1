@@ -18,8 +18,6 @@ sig User extends Profile {
 	canSee: set Content
 }
 
-sig PersonalDetail {}
-
 
 --facts
 fact friendship {all disj u1,u2:User | u2 in u1.friend <=> u1 in u2.friend}
@@ -35,20 +33,30 @@ fact oneAdmin {all admin:Group.administrator | #{admin} > 0}
 --all the Content stuff
 -----------------------------
 abstract sig Content{
-	comments: set Comment,
 	circle: one Int,
 	owner: one Profile--is basically equal to posted to, right?
 }
 
+abstract sig Commentable extends Content{
+	comments: set Comment
+}
+
 sig Text{}
 
-sig Post extends Content{
+sig Post extends Commentable{
 	contains: set Photo
 }
 
-sig Photo extends Content{}
+sig Photo extends Commentable{}
 
-sig Comment extends Content{}
+sig Comment extends Commentable{}
+
+sig PersonalDetail extends Content {}
+
+sig Message extends Content{
+	recipient: one User,
+	contains: set Photo
+}
 
 --facts
 fact commentCommentsOnOneThing{all com:Comment | {one con:Content | com in con.comments}}
@@ -56,44 +64,37 @@ fact commentChainCannotStartWithComment{all com:Comment | one con:(Content-Comme
 
 --preds
 pred canSee[u: User, c: Content] {
-	c in u.canSee
+	--TODO: implement check for blocked users
+	((c.circle = 1 => u = c.owner)
+	and (c.circle = 2 => (u in c.owner.friend or u = c.owner))
+	and (c.circle = 3 => (u in c.owner.friend.friend or u in c.owner.friend or u = c.owner))
+	and (c.circle = 4 => (u in c.owner.*friend or u = c.owner)))
+	or (c.circle = 5) or (u = c.recipient)
 }
-
 
 ----------------
 --Messages
 ----------------
-sig Message{
-	sender: one User,
-	recipient: one User,
-	contains: set Photo
-}
 
-fact message {all m:Message | m.recipient != m.sender}
+fact message {all m:Message | m.recipient != m.owner}
 
 ----------------
 --Circle stuff
 ----------------
 fact validCircle {all c: Content | c.circle >= 1 and c.circle <= 5}
 -- privacy settings here
---TODO: Where do we check for blocking? Do it here on in canSee Predicate... btw. maybe renaming canSee attribute of User
---since there could be missunderstandings
-fact privateCircles {all c: Content | c.circle = 1 => (all u: User | c in u.canSee <=> u = c.owner)}
-fact friendsCircles {all c: Content | c.circle = 2 => (all u: User | c in u.canSee <=> (u in c.owner.friend or u = c.owner))}
-fact fofCircles {all c: Content | c.circle = 3 => (all u: User | c in u.canSee <=> (u in c.owner.friend.friend or u in c.owner.friend or u = c.owner))}
-fact chainCircles {all c: Content | c.circle = 4 => (all u: User | c in u.canSee <=> (u in c.owner.*friend or u = c.owner))}
-fact publicCircles {all c: Content | c.circle = 5 => (all u: User | c in u.canSee)}
+fact validCanSee {all u: User | all c: Content | c in u.canSee <=> canSee[u, c]}
 
 -----------------
 --commands
 -----------------
 pred checkCirc3 {
-	#{c: Content | c.circle != 3} = 0 and #{c: Content | c.circle = 3} >= 2 and
+	#{c: Content | c.circle != 3} <= 2 and #{c: Content | c.circle = 3} >= 2 and
 	#{User} = 7  and #{PersonalDetail} = 1 and #{Post} = 5 and #{Photo} = 2 and {all u:User | #{u.friend}=2} and {all u:User | #{u.canSee} >= 1}
 }
 
 pred checkCirc5 {
-	#{c: Content | c.circle != 5} = 0 and #{c: Content | c.circle = 5} >= 2 and
+	#{c: Content | c.circle != 5} <= 2 and #{c: Content | c.circle = 5} >= 2 and
 	#{User} = 7  and #{PersonalDetail} = 3 and #{Post} = 5 and #{Photo} = 2 and {all u:User | #{u.friend}=2} and {all u:User | #{u.canSee} >= 1}
 }
 
