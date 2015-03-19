@@ -18,9 +18,7 @@ sig User extends Profile {
 	canSee: set Content
 }
 
-sig PersonalDetail {
-	--attribute: String
-}
+sig PersonalDetail {}
 
 
 --facts
@@ -45,7 +43,6 @@ abstract sig Content{
 sig Text{}
 
 sig Post extends Content{
-	--text: String, --can be empty!
 	contains: set Photo
 }
 
@@ -54,9 +51,8 @@ sig Photo extends Content{}
 sig Comment extends Content{}
 
 --facts
---fact commentChainsAcyclic {all c:Comment | c not in c.*comments}
-fact commentCommentsOnOneThing{all com:Comment |  one con:Content| com in con.comments}
-fact commentChainCannotStartWithComment{all com:Comment | some con:Content-Comment | com in con.^comments}
+fact commentCommentsOnOneThing{all com:Comment | {one con:Content | com in con.comments}}
+fact commentChainCannotStartWithComment{all com:Comment | one con:(Content-Comment) | com in con.^comments}
 
 --preds
 pred canSee[u: User, c: Content] {
@@ -70,7 +66,6 @@ pred canSee[u: User, c: Content] {
 sig Message{
 	sender: one User,
 	recipient: one User,
-	--text: one Text, --can be empty!
 	contains: set Photo
 }
 
@@ -98,7 +93,6 @@ pred checkCirc3 {
 }
 
 pred checkCirc5 {
-	--all u:User | #{u.friend} >1
 	#{c: Content | c.circle != 5} = 0 and #{c: Content | c.circle = 5} >= 2 and
 	#{User} = 7  and #{PersonalDetail} = 3 and #{Post} = 5 and #{Photo} = 2 and {all u:User | #{u.friend}=2} and {all u:User | #{u.canSee} >= 1}
 }
@@ -114,8 +108,8 @@ run showSomeComments for 10
 ------------
 --checks
 ------------
-check personalDetail {all disj u1,u2: User | no upd:u1.pDetails | upd in u2.pDetails}--Two user cannot have the same personal detail
-check comments {all disj c1,c2: Content | no com:c1.comments | com in c2.comments}--Two Contents cannot have the same comment
+check pDBelongsToOneUser {all disj u1,u2: User | no upd:u1.pDetails | upd in u2.pDetails}--Two user cannot have the same personal detail
+check twoContentsCannotHaveSameComment {all disj c1,c2: Content | no com:c1.comments | com in c2.comments}--Two Contents cannot have the same comment
 ------------------
 --Exercises...
 ------------------
@@ -137,3 +131,17 @@ check groupHasMembers{no g:Group | #{g.member}=0}
 --6
 check allNewsFeedContentIsVisible{all u:User | all c:Content | isOnNewsFeed[u,c] implies canSee[u,c]}
 
+-------------
+--Task 3e
+-------------
+--1
+pred showChainOfSizeFive {one c:Comment |  #{c.comments.comments.comments.comments} > 0}
+run showChainOfSizeFive for 6
+
+--2
+pred threeUsersSevenGroups {#{User}=3 and #{Group}=7 and {all disj g1,g2:Group | g1.member != g2.member}}
+run threeUsersSevenGroups for 10
+
+--3
+pred fourUsersOneFriendNotTransitiv{#{User}=4 and {all u:User | #{u.friend}>0} }
+run fourUsersOneFriendNotTransitiv for 10
