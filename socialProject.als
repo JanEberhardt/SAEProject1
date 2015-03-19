@@ -104,12 +104,12 @@ pred showSomeComments {
 }
 run showSomeComments for 10
 
-
 ------------
 --checks
 ------------
 check pDBelongsToOneUser {all disj u1,u2: User | no upd:u1.pDetails | upd in u2.pDetails}--Two user cannot have the same personal detail
 check twoContentsCannotHaveSameComment {all disj c1,c2: Content | no com:c1.comments | com in c2.comments}--Two Contents cannot have the same comment
+
 ------------------
 --Exercises...
 ------------------
@@ -142,6 +142,17 @@ run showChainOfSizeFive for 6
 pred threeUsersSevenGroups {#{User}=3 and #{Group}=7 and {all disj g1,g2:Group | g1.member != g2.member}}
 run threeUsersSevenGroups for 10
 
---3
-pred fourUsersOneFriendNotTransitiv{#{User}=4 and {all u:User | #{u.friend}>0} }
+--3--TODO
+pred fourUsersOneFriendNotTransitiv{#{User}=4 and {all u:User | #{u.friend}>0}} --and {one u1,u2:User | u1 != u2 and u1 not in u2.^friend } 
 run fourUsersOneFriendNotTransitiv for 10
+
+--4 is against the privacy stuff, right?
+--TODO
+
+--5
+pred photoWithPhotoNotByPoster{ #{Post} = 1 and #{Post.contains}=1 and {all p:Photo | p.circle != 5} }
+run photoWithPhotoNotByPoster for 3
+
+--6
+pred friendOfFriendPostWithPhoto{#{Post} = 1 and {all p:Post | p.circle = 3}}
+run friendOfFriendPostWithPhoto for 5
