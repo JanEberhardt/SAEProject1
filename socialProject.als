@@ -64,12 +64,15 @@ fact commentChainCannotStartWithComment{all com:Comment | one con:(Content-Comme
 
 --preds
 pred canSee[u: User, c: Content] {
-	--TODO: implement check for blocked users
+	(
+	-- circle logic
 	((c.circle = 1 => u = c.owner)
 	and (c.circle = 2 => (u in c.owner.friend or u = c.owner))
 	and (c.circle = 3 => (u in c.owner.friend.friend or u in c.owner.friend or u = c.owner))
 	and (c.circle = 4 => (u in c.owner.*friend or u = c.owner)))
-	or (c.circle = 5) or (u = c.recipient)
+	or (c.circle = 5) -- anyone can see public content
+	or (u = c.recipient) -- message recipients can always see the message
+	) and (not u in c.owner.blocks) -- EXCEPT if the content owner blocked them
 }
 
 ----------------
