@@ -1,8 +1,9 @@
 open util/integer
 
---------------------------
---all the profile stuff
---------------------------
+-------------------------
+-- Profile Signatures --
+-------------------------
+
 abstract sig Profile {}
 
 sig Group extends Profile {
@@ -15,33 +16,35 @@ sig User extends Profile {
 	friend: set User,
 	blocks: set User,
 	pDetails: set PersonalDetail,
-	canSee: set Content
+	--canSee: set Content -- for debug purposes - see below
 }
 
+-- Add this line (and the one in the user signature) to get arrows for the content each user can see:
+--fact validCanSee {all u: User | all c: Content | c in u.canSee <=> canSee[u, c]}
 
---facts
-fact friendship {all u1:User | all u2:u1.friend | u1 in u2.friend}
+-------------------
+-- Profile Facts --
+-------------------
+
+fact friendship {all u1:User | all u2:u1.friend | u1 in u2.friend} -- friendship is symmetric
 fact friendshipNonReflexiv {no u: User | u in u.friend}
-fact blocks{no u:User | u in u.blocks}
---Each personalDetail must be connected from exactly one user
-fact personalDetail {all pd: PersonalDetail | all p: Profile | pd in p.pDetails <=> pd.owner = p}
-fact administratorIsMember {all g:Group | g.administrator in g.member} 
---There must be at least one administrator
-fact oneAdmin {all admin:Group.administrator | #{admin} > 0}
+fact blocks{no u:User | u in u.blocks} -- users cannot block themselves
+fact personalDetail {all pd: PersonalDetail | all p: Profile | pd in p.pDetails <=> pd.owner = p} -- Each PersonalDetail must be connected to exactly one user
+fact administratorIsMember {all g:Group | g.administrator in g.member}
+fact oneAdmin {all admin:Group.administrator | #{admin} > 0} -- There must be at least one administrator
 
------------------------------
---all the Content stuff
------------------------------
+---------------------------
+-- Content Signatures --
+---------------------------
+
 abstract sig Content{
 	circle: one Int,
-	owner: one Profile--is basically equal to posted to, right?
+	owner: one Profile
 }
 
 abstract sig Commentable extends Content{
 	comments: set Comment
 }
-
-sig Text{}
 
 sig Post extends Commentable{
 	contains: set Photo
@@ -51,36 +54,33 @@ sig Photo extends Commentable{}
 
 sig Comment extends Commentable{}
 
-sig PersonalDetail extends Content {}
+sig PersonalDetail extends Content{}
 
 sig Message extends Content{
 	recipient: one User,
 	contains: set Photo
 }
 
---facts
-fact commentCommentsOnOneThing{all com:Comment | {one con:Content | com in con.comments}}
-fact commentChainCannotStartWithComment{all com:Comment | one con:(Content-Comment) | com in con.^comments}
-fact groupsDontPostComments{all c:Comment | no g:Group | c.owner = g}
-fact groupsOnlyPostPrivate{all c:Content | c.owner in Group => c.circle = 1}
---note: the owner of a post does NOT have to see the contained photos (for example if their privacy setting has been changed later on)
-
-----------------
---Messages
-----------------
+---------------------
+-- Content Facts --
+---------------------
 
 fact message {all m:Message | m.recipient != m.owner}
+fact commentCommentsOnOneThing{all com:Comment | {one con:Content | com in con.comments}} -- a comment belongs to exactly one content
+fact commentChainCannotStartWithComment{all com:Comment | one con:(Content-Comment) | com in con.^comments} -- at the root of a comment chain there has to be a non-comment content
+fact groupsDontPostComments{all c:Comment | no g:Group | c.owner = g}
 
-----------------
---Circle stuff
-----------------
+-- posts created by groups count as "private", but have special semantics: the group members, and only they, can see them.
+-- note: a post CAN contain photos which are not visible to its owner (for example if their privacy setting has been changed since the post has been created)
+fact groupsOnlyPostPrivate{all c:Content | c.owner in Group => c.circle = 1}
+
+-- the circle enum has numbers from 1 to 5, representing private/friends/friends of friends/friends chain/public, respectively
 fact validCircle {all c: Content | c.circle >= 1 and c.circle <= 5}
--- privacy settings here
-fact validCanSee {all u: User | all c: Content | c in u.canSee <=> canSee[u, c]}
 
 -----------------
---commands
+-- Predicates --
 -----------------
+
 pred checkCirc3 {
 	#{c: Content | c.circle != 3} <= 2 and #{c: Content | c.circle = 3} >= 2 and
 	#{User} = 7  and #{PersonalDetail} = 1 and #{Post} = 5 and #{Photo} = 2 and {all u:User | #{u.friend}=2} and {all u:User | #{u.canSee} >= 1}
@@ -103,20 +103,20 @@ pred personalDetails {
 }
 run personalDetails for 9
 
-------------
---checks
-------------
+-----------------
+-- Assertions --
+-----------------
+
 check pDBelongsToOneUser {all disj u1,u2: User | no upd:u1.pDetails | upd in u2.pDetails}--Two user cannot have the same personal detail
 check twoContentsCannotHaveSameComment {all disj c1,c2: Content | no com:c1.comments | com in c2.comments}--Two Contents cannot have the same comment
 check groupsDontPostPD {all g:Group | all pd: PersonalDetail | not g in pd.owner}
 
-------------------
---Exercises...
-------------------
+----------------
+-- Exercises --
+----------------
 
--------------
---Task 3c
--------------
+-- Task C --
+
 pred canSee[u: User, c: Content] {
 	(
 	-- circle logic
@@ -140,28 +140,33 @@ pred isOnNewsFeed[u: User, c: Content] {
 }
 run isOnNewsFeed for 3
 
--------------
---Task 3d
--------------
+-- Task D --
+
 --1
+
 check commentChainsAcyclic{all c:Comment | c not in c.^comments}
+
 --2
 check canModifyOnlyWhatCanSee{all u: User | all c: Content | canModify[u,c] => canSee[u,c] }
+
 --3
--- This property is not true, as a user can post a content to a group while not being an administator
+-- This property is not true, as a user can post a content to a group while not being an administrator
 -- and thus not being allowed, to change the content.
+
 --4
 -- This Property is not true, as the Circle for the Photo can me more restrictive, then the Circle of the Post itself.
+
 --5
 check groupHasMembers{no g:Group | #{g.member}=0}
+
 --6
 check allNewsFeedContentIsVisible{all u:User | all c:Content | isOnNewsFeed[u,c] implies canSee[u,c]}
+
 --7
 check cannotSeeContentByAnyoneWhoBlockedThem {all u:User | all c:Content | u in c.owner.blocks => not canSee[u,c]}
 
--------------
---Task 3e
--------------
+-- Task E --
+
 --1
 pred showChainOfSizeFive {one c:Comment |  #{c.comments.comments.comments.comments} > 0}
 run showChainOfSizeFive for 6
