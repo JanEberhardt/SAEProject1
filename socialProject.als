@@ -15,8 +15,8 @@ sig User extends Profile {
 	follows: set Profile,
 	friend: set User,
 	blocks: set User,
-	pDetails: set PersonalDetail,
-	--canSee: set Content -- for debug purposes - see below
+	--canSee: set Content, -- for debug purposes - see below
+	pDetails: set PersonalDetail
 }
 
 -- Add this line (and the one in the user signature) to get arrows for the content each user can see:
@@ -83,12 +83,7 @@ fact validCircle {all c: Content | c.circle >= 1 and c.circle <= 5}
 
 pred checkCirc3 {
 	#{c: Content | c.circle != 3} <= 2 and #{c: Content | c.circle = 3} >= 2 and
-	#{User} = 7  and #{PersonalDetail} = 1 and #{Post} = 5 and #{Photo} = 2 and {all u:User | #{u.friend}=2} and {all u:User | #{u.canSee} >= 1}
-}
-
-pred checkCirc5 {
-	#{c: Content | c.circle != 5} <= 2 and #{c: Content | c.circle = 5} >= 2 and
-	#{User} = 7  and #{PersonalDetail} = 3 and #{Post} = 5 and #{Photo} = 2 and {all u:User | #{u.friend}=2} and {all u:User | #{u.canSee} >= 1}
+	#{User} = 7  and #{PersonalDetail} = 1 and #{Post} = 5 and #{Photo} = 2 and {all u:User | #{u.friend}=2}
 }
 
 run checkCirc3 for 15
