@@ -70,12 +70,13 @@ fact commentCommentsOnOneThing{all com:Comment | {one con:Content | com in con.c
 fact commentChainCannotStartWithComment{all com:Comment | one con:(Content-Comment) | com in con.^comments} -- at the root of a comment chain there has to be a non-comment content
 fact groupsDontPostComments{all c:Comment | no g:Group | c.owner = g}
 
--- posts created by groups count as "private", but have special semantics: the group members, and only they, can see them.
--- note: a post CAN contain photos which are not visible to its owner (for example if their privacy setting has been changed since the post has been created)
-fact groupsOnlyPostPrivate{all c:Content | c.owner in Group => c.circle = 1}
+-- posts created by groups count either as "private" (the group members, and only they, can see them) or as "public" (anyone can see them).
+fact groupPostPrivacy{all c:Content | c.owner in Group => (c.circle = 1 or c.circle = 5)}
 
 -- the circle enum has numbers from 1 to 5, representing private/friends/friends of friends/friends chain/public, respectively
 fact validCircle {all c: Content | c.circle >= 1 and c.circle <= 5}
+
+-- note: a post CAN contain photos which are not visible to its owner (for example if their privacy setting has been changed since the post has been created)
 
 -----------------
 -- Predicates --
