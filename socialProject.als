@@ -29,6 +29,7 @@ sig User extends Profile {
 fact friendship {all u1:User | all u2:u1.friend | u1 in u2.friend} -- friendship is symmetric
 fact friendshipNonReflexiv {no u: User | u in u.friend}
 fact blocks{no u:User | u in u.blocks} -- users cannot block themselves
+fact follows {no u:User | u in u.follows} -- users cannot follow themselves
 fact personalDetail {all pd: PersonalDetail | all p: Profile | pd in p.pDetails <=> pd.owner = p} -- Each PersonalDetail must be connected to exactly one user
 fact administratorIsMember {all g:Group | g.administrator in g.member}
 fact oneAdmin {all admin:Group.administrator | #{admin} > 0} -- There must be at least one administrator
