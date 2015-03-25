@@ -139,7 +139,6 @@ run isOnNewsFeed for 3
 -- Task D --
 
 --1
-
 check commentChainsAcyclic{all c:Comment | c not in c.^comments}
 
 --2
@@ -180,7 +179,13 @@ pred weird{some u1:User | some u2:u1.friend | some u3:u2.friend | some c:Post | 
 run weird for 10
 
 --5
-pred photoWithPhotoNotByPoster{ #{Post} = 1 and #{Post.contains}=1 and {some u:User | some post:Post | some photo:Photo | photo in post.contains and u not in photo.owner and photo.circle != 5} }
+pred photoWithPhotoNotByPoster{ #{Post} = 1 and #{Post.contains}=1 
+	and {some u:User | some post:Post | some photo:Photo | photo in post.contains
+		and u not in photo.owner 
+		and u in post.owner 
+		and photo.circle != 5  
+		and photo.owner not in Group
+		and post.owner not in Group} }
 run photoWithPhotoNotByPoster for 3
 
 --6
