@@ -176,8 +176,9 @@ pred fourUsersOneFriendNotTransitiv{#{User}=4 and {all u:User | #{u.friend}>0} a
 run fourUsersOneFriendNotTransitiv for 10
 
 --4
-pred weird{some u1:User | some u2:u1.friend | some u3:u2.friend | some c:Post | some p:Photo | u3 in c.owner and u3 not in u1.friend and not u3 = u1 and c.circle = 3 and p in c.contains and p.owner in {User - u1 - u2 - u3}}
+pred weird{some u1:User | some u2:u1.friend | some u3:u2.friend | some c:Post | some p:Photo | (#{Group} = 0) and u3 in c.owner and u3 not in u1.friend and not u3 = u1 and c.circle = 3 and canSee[u1,c] and p in c.contains and p.owner in {User - u1 - u2 - u3}}
 run weird for 10
+-- added the group limitation for clarity
 
 --5
 pred photoWithPhotoNotByPoster{ #{Post} = 1 and #{Post.contains}=1 
